@@ -75,12 +75,10 @@ class Snake():
 
     def grow(self):
         part = BodyPart((255,255,255))
-        last_index = len(self.parts)-1
-        left_diff = self.parts[last_index].rect.left - self.parts[last_index-1].rect.left
-        top_diff = self.parts[last_index].rect.top - self.parts[last_index-1].rect.top
-        part.rect.left = self.parts[last_index].rect.left + left_diff
-        part.rect.top = self.parts[last_index].rect.top + top_diff
-        self.parts.append(part)
+        part.rect.left = self.head.rect.left
+        part.rect.top = self.head.rect.top
+        self.parts.insert(1, part)
+        self.head.move()
         return part
 
 class Food(GameObject):
@@ -117,7 +115,6 @@ while running:
 
     pressed_keys = pygame.key.get_pressed()
     snake.head.change_direction(pressed_keys)
-    snake.slither()
 
     for i in range(1, len(snake.parts)):
         if pygame.sprite.collide_rect(snake.head, snake.parts[i]):
@@ -128,6 +125,8 @@ while running:
     if len(collided_food) != 0:
         new_part = snake.grow()
         all_sprites.add(new_part)
+    else:
+        snake.slither()
 
     window.fill((0,0,0))
     for sprite in all_sprites:
