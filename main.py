@@ -99,12 +99,8 @@ snake = Snake(5)
 running = True
 
 foods = pygame.sprite.Group()
-body_parts = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 
-partsCopy = snake.parts.copy()
-partsCopy.pop(0)
-body_parts.add(iter(partsCopy))
 all_sprites.add(iter(snake.parts))
 
 ADDFOOD = pygame.USEREVENT + 1
@@ -122,16 +118,16 @@ while running:
     pressed_keys = pygame.key.get_pressed()
     snake.head.change_direction(pressed_keys)
     snake.slither()
-    
-    if pygame.sprite.spritecollideany(snake.head, body_parts):
-        snake.head.kill()
-        running = False
+
+    for i in range(1, len(snake.parts)):
+        if pygame.sprite.collide_rect(snake.head, snake.parts[i]):
+            snake.head.kill()
+            running = False
 
     collided_food = pygame.sprite.spritecollide(snake.head, foods, True)
     if len(collided_food) != 0:
-        part = snake.grow()
-        all_sprites.add(part)
-        body_parts.add(part)
+        new_part = snake.grow()
+        all_sprites.add(new_part)
 
     window.fill((0,0,0))
     for sprite in all_sprites:
