@@ -41,10 +41,22 @@ class Snake:
 main():
     initialize the game
     start the snake with a fixed length
+    create a spritegroup for food (to check collision with head)
+    create a spritegroup for all sprites (for easy rendering)
+	create an event to spawn food at regular intervals
+	gameLoop() {
+		deal with events
+		get keys pressed and pass the them to the change_dir function
+		move the snake
+		check for collision with food, when head collides with food, the food is destroyed and the snake grows 
+		check for collision with body, game ends and user can play again
+		render the sprites
+		lock the framerate at 15 fps
+	}
     print out highscore and current score
-    
     write_highscore(int highscore):
         saves new highscore to a local file
-    
     int read_highscore():
         retrieve highscore from local file
+		
+	

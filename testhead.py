@@ -6,6 +6,5 @@ class TestHead(unittest.TestCase):
         head = main.Head((255,255,255))
         head.move()
         self.assertEqual(head.rect.left, 351)
-
 if __name__ == '__main__':
     unittest.main()
