@@ -1,0 +1,5 @@
+When the program first starts, we read the highscore from a file
+If there is a highscore, we show it on the screen
+If not, we show that the highscore is 0
+At the end of each game, we check to see if the score is greater than the high score
+If so, we write the new score to the same file we read from, and delete the old data

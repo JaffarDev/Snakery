@@ -1,9 +1,12 @@
 import random
 from enum import Enum
 import pygame
+import pygame.freetype
 
-WINDOW_WIDTH = 700    #Width of the game window
-WINDOW_HEIGHT = 500   #Height of the game window
+WINDOW_WIDTH = 700
+WINDOW_HEIGHT = 500   
+pygame.init()
+FONT = pygame.freetype.Font("res/fonts/JOKERMAN.TTF", 17)
 
 class GameObject(pygame.sprite.Sprite):
     def __init__(self):
@@ -67,12 +70,14 @@ class Snake():
 
     #The snake is moved by moving each part to the location of the part before it (except the head)
     def slither(self):
-        last_index = len(self.parts) - 1     #Start from the last index
+        last_index = len(self.parts) - 1
         for i in range(last_index, 0, -1):
             self.parts[i].rect.left = self.parts[i-1].rect.left
             self.parts[i].rect.top = self.parts[i-1].rect.top
         self.head.move()
-
+    
+    #Adds a new BodyPart to the snake, placing it at the snake's head's location, the snake's head is then moved.
+    #NOTE: if grow is called, there is no need to call slither during the same frame
     def grow(self):
         part = BodyPart((255,255,255))
         part.rect.left = self.head.rect.left
@@ -89,48 +94,92 @@ class Food(GameObject):
         self.rect.left = random.randint(0, WINDOW_WIDTH/10) * 10
         self.rect.top = random.randint(0, WINDOW_HEIGHT/10) * 10 
 
-pygame.init()
-window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-clock = pygame.time.Clock()
+class SnakeGame():
+    ADDFOOD = pygame.USEREVENT + 1  #Custom Event used to spawn food at regular intervals
+    def __init__(self):
+        pygame.display.set_caption("Snake Game")
+        self.window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.clock = pygame.time.Clock()
+        self.running = True
+        self.highscore = self.read_highscore()
+    
+    def read_highscore(self):
+        with open("storage/highscore.txt") as reader:
+            data = reader.readline()
+            try:
+                return int(data)
+            except ValueError:
+                return 0
+    
+    def write_highscore(self):
+        old_highscore = self.read_highscore()
+        with open("storage/highscore.txt", "r+") as file:
+            file.truncate(0)
+            if old_highscore < len(self.snake.parts):
+                file.write(str(len(self.snake.parts)))
 
-snake = Snake(5)
-running = True
+    #Used for unit testing
+    #def write_highscore(self, newscore):
+        #with open("storage/highscore.txt", "w") as writer:
+            #writer.truncate(0)
+            #writer.write(str(newscore))
+    
+    def newgame(self):
+        self.snake = Snake(5)
+        self.foods = pygame.sprite.Group()
+        self.all_sprites = pygame.sprite.Group()
+        self.all_sprites.add(iter(self.snake.parts))
 
-foods = pygame.sprite.Group()
-all_sprites = pygame.sprite.Group()
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == SnakeGame.ADDFOOD:
+                food = Food()
+                self.all_sprites.add(food)
+                self.foods.add(food)
 
-all_sprites.add(iter(snake.parts))
+    def render(self):
+        self.window.fill((0,0,0))
+        for sprite in self.all_sprites:
+            self.window.blit(sprite.surface, sprite.rect)
+        FONT.render_to(self.window, (10, 10), "Score: " + str(len(self.snake.parts)), (0, 255, 255))
+        FONT.render_to(self.window, (WINDOW_WIDTH/2 - 50, 10), "Highscore: " + str(self.highscore), (0, 255, 255))
 
-ADDFOOD = pygame.USEREVENT + 1
-pygame.time.set_timer(ADDFOOD, 1500)
+    #Checks if the head collided the body, which causes the game to end
+    def collided_body(self):
+        for i in range(1, len(self.snake.parts)):
+            if pygame.sprite.collide_rect(self.snake.head, self.snake.parts[i]):
+                self.snake.head.kill()
+                self.running = False
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == ADDFOOD:
-            food = Food()
-            all_sprites.add(food)
-            foods.add(food)
+    #If the head collides with food, the snake grows
+    def collided_food(self):
+        food_collided = pygame.sprite.spritecollide(self.snake.head, self.foods, True)
+        if len(food_collided) != 0:
+            return True
+        else:
+            return False
 
-    pressed_keys = pygame.key.get_pressed()
-    snake.head.change_direction(pressed_keys)
+    def gameloop(self):
+        pygame.time.set_timer(SnakeGame.ADDFOOD, 1500)
+        while self.running:
+            self.handle_events()
+            pressed_keys = pygame.key.get_pressed()
+            self.snake.head.change_direction(pressed_keys)
+            self.collided_body()
+            if self.collided_food():
+                new_part = self.snake.grow()
+                self.all_sprites.add(new_part)
+                if len(self.snake.parts) > self.highscore:
+                    self.highscore = len(self.snake.parts)
+            else:
+                self.snake.slither()
+            self.render()
+            pygame.display.flip()
+            self.clock.tick(15)
+        self.write_highscore()
 
-    for i in range(1, len(snake.parts)):
-        if pygame.sprite.collide_rect(snake.head, snake.parts[i]):
-            snake.head.kill()
-            running = False
-
-    collided_food = pygame.sprite.spritecollide(snake.head, foods, True)
-    if len(collided_food) != 0:
-        new_part = snake.grow()
-        all_sprites.add(new_part)
-    else:
-        snake.slither()
-
-    window.fill((0,0,0))
-    for sprite in all_sprites:
-        window.blit(sprite.surface, sprite.rect)
-
-    pygame.display.flip()
-    clock.tick(15)
+game = SnakeGame()
+game.newgame()
+game.gameloop()

@@ -26,10 +26,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="main.py" />
-    <Compile Include="testsnake.py">
+    <Compile Include="test_snake.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="testhead.py">
+    <Compile Include="test_head.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="test_highscore.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
