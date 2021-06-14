@@ -103,6 +103,8 @@ class SnakeGame():
         self.running = True
         self.highscore = self.read_highscore()
     
+    #Reads the highscore from a local file
+    #If the file is empty or the data in the file is not convertable to int (not a number) then 0 is returned
     def read_highscore(self):
         with open("storage/highscore.txt") as reader:
             data = reader.readline()
@@ -111,10 +113,17 @@ class SnakeGame():
             except ValueError:
                 return 0
     
+    #Erases all data from the file and writes the new highscore
     def write_highscore(self):
         with open("storage/highscore.txt", "r+") as file:
             file.truncate(0)
             file.write(str(self.highscore))
+
+    def display_scores(self):
+        score = FONT.render("Score: " + str(len(self.snake.parts)), (0, 255, 255))
+        highscore = FONT.render("Highscore: " + str(self.highscore), (0, 255, 255))
+        self.window.blit(score[0], (10, 10))
+        self.window.blit(highscore[0], (WINDOW_WIDTH/2 - highscore[1].width/2, 10))
 
     #Used for unit testing
     #def write_highscore(self, newscore):
@@ -122,12 +131,14 @@ class SnakeGame():
             #writer.truncate(0)
             #writer.write(str(newscore))
     
+    #Called at the beginning of the game and then each time the player loses and decided to play again
     def newgame(self):
         self.snake = Snake(5)
         self.foods = pygame.sprite.Group()
         self.all_sprites = pygame.sprite.Group()
         self.all_sprites.add(iter(self.snake.parts))
 
+    #Called at each frame to handle the game's events
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -137,14 +148,14 @@ class SnakeGame():
                 self.all_sprites.add(food)
                 self.foods.add(food)
 
+    #Renders all sprites to the screen and displays the score
     def render(self):
         self.window.fill((0,0,0))
         for sprite in self.all_sprites:
             self.window.blit(sprite.surface, sprite.rect)
-        FONT.render_to(self.window, (10, 10), "Score: " + str(len(self.snake.parts)), (0, 255, 255))
-        FONT.render_to(self.window, (WINDOW_WIDTH/2 - 50, 10), "Highscore: " + str(self.highscore), (0, 255, 255))
+        self.display_scores()
 
-    #Checks if the head collided the body, which causes the game to end
+    #Checks if the head collided with the body, which causes the game to end
     def collided_body(self):
         for i in range(1, len(self.snake.parts)):
             if pygame.sprite.collide_rect(self.snake.head, self.snake.parts[i]):
