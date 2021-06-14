@@ -112,11 +112,9 @@ class SnakeGame():
                 return 0
     
     def write_highscore(self):
-        old_highscore = self.read_highscore()
         with open("storage/highscore.txt", "r+") as file:
             file.truncate(0)
-            if old_highscore < len(self.snake.parts):
-                file.write(str(len(self.snake.parts)))
+            file.write(str(self.highscore))
 
     #Used for unit testing
     #def write_highscore(self, newscore):
