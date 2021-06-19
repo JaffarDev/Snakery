@@ -55,6 +55,20 @@ class Head(BodyPart):
         elif self.rect.top + self.rect.height > WINDOW_HEIGHT:
             self.rect.top = 0
 
+    def draw_eyes(self, color):
+        if self.x_speed < 0:
+            pygame.draw.circle(self.surface, color, (2,2), 1)
+            pygame.draw.circle(self.surface, color, (2,8), 1)
+        elif self.x_speed > 0:
+            pygame.draw.circle(self.surface, color, (8,2), 1)
+            pygame.draw.circle(self.surface, color, (8,8), 1)
+        elif self.y_speed < 0:
+            pygame.draw.circle(self.surface, color, (2,2), 1)
+            pygame.draw.circle(self.surface, color, (8,2), 1)
+        else:
+            pygame.draw.circle(self.surface, color, (2,8), 1)
+            pygame.draw.circle(self.surface, color, (8,8), 1)
+
 class Food(GameObject):
     def __init__(self):
         left = random.randint(0, WINDOW_WIDTH/10) * 10
@@ -65,8 +79,9 @@ class Food(GameObject):
 
 #Hold all the snake's body parts including the head
 class Snake():
-    def __init__(self, color, length):
+    def __init__(self, color, secondary_color, length):
         self.color = color
+        self.secondary_color = secondary_color
         self.head = Head(self.color, WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
         self.parts = []
         self.parts.append(self.head)
@@ -82,6 +97,23 @@ class Snake():
         self.color = rgb_color
         for part in self.parts:
             part.surface.fill(rgb_color)
+    
+    #Draws a set of eyes and stripes for the snake
+    def animate(self):
+        for part in self.parts:
+            part.surface.fill(self.color)
+        self.head.draw_eyes(self.secondary_color)
+        for i in range(len(self.parts)-1):
+            x_diff = self.parts[i].rect.left - self.parts[i+1].rect.left
+            y_diff = self.parts[i].rect.top - self.parts[i+1].rect.top
+            if x_diff > 0:
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (0,9), 1)
+            elif x_diff < 0:
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (9,0), (9,9), 1)
+            elif y_diff > 0:
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (9,0), 1)
+            else:
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,9), (9,9), 1)
 
     #The snake is moved by moving each part to the location of the part before it (except the head)
     def slither(self):
@@ -116,11 +148,13 @@ class Snake():
         return False
 
 class Button(pygame.sprite.Sprite):
+
     def __init__(self, left, top, on_click):
         super().__init__()
         self.surface = pygame.image.load("res/images/SettingsIcon.PNG").convert()
         self.rect = self.surface.get_rect(topleft = (left, top))
         self.on_click = on_click
+
     #Checks if the mouse was over the button when the click event happened.
     def was_clicked(self, mouse_x, mouse_y):
         if self.rect.left <= mouse_x <= self.rect.left + self.rect.width:
@@ -163,7 +197,9 @@ class SettingsMenu(tkinter.Frame):
             next_column+=1
 
 class Game():
+
     ADDFOOD = pygame.USEREVENT + 1  #Custom Event used to spawn food at regular intervals
+    
     def __init__(self):
         pygame.display.set_caption("Snake Game")
         self.window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -174,7 +210,7 @@ class Game():
 
     def pause(self):
         pygame.time.set_timer(Game.ADDFOOD, 0)      #Food must not be added while the game is paused
-        SettingsMenu(self)
+        SettingsMenu(self)                         
         pygame.time.set_timer(Game.ADDFOOD, 1500)
     
     #Reads the highscore from a local file
@@ -211,7 +247,7 @@ class Game():
 
     #Called at the beginning of the game and then each time the player loses and decided to play again
     def newgame(self):
-        self.snake = Snake((100, 100, 100), 5)
+        self.snake = Snake((100, 100, 100), (255, 255, 255), 5)
         self.food = pygame.sprite.Group()
         self.sprites = pygame.sprite.Group()
         self.sprites.add(iter(self.snake.parts))
@@ -231,7 +267,8 @@ class Game():
 
     #Renders all sprites to the screen and displays the score
     def render(self):
-        self.window.fill((0,0,0))
+        self.window.fill((0,0,0))   #Resets the screen to blank
+        self.snake.animate()
         for sprite in self.sprites:
             self.window.blit(sprite.surface, sprite.rect)
         self.display_scores()
@@ -255,5 +292,4 @@ class Game():
 
 game = Game()
 game.newgame()
-#game.pause()
 game.loop()
