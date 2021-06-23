@@ -82,6 +82,8 @@ class Snake():
     def __init__(self, color, secondary_color, length):
         self.color = color
         self.secondary_color = secondary_color
+        self.eat_sound = pygame.mixer.Sound("res/sounds/bite.WAV")
+        self.death_sound = pygame.mixer.Sound("res/sounds/death.WAV")
         self.head = Head(self.color, WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
         self.parts = []
         self.parts.append(self.head)
@@ -98,7 +100,7 @@ class Snake():
         for part in self.parts:
             part.surface.fill(rgb_color)
     
-    #Draws a set of eyes and stripes for the snake
+    #Draws a set of eyes and stripes for the snake.
     def animate(self):
         for part in self.parts:
             part.surface.fill(self.color)
@@ -114,6 +116,7 @@ class Snake():
                 pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (9,0), 1)
             else:
                 pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,9), (9,9), 1)
+            
 
     #The snake is moved by moving each part to the location of the part before it (except the head)
     def slither(self):
@@ -136,6 +139,7 @@ class Snake():
         if len(food_collided) != 0:
             new_part = self.grow()
             sprites.add(new_part)
+            self.eat_sound.play()
             return True
         return False
 
@@ -144,11 +148,11 @@ class Snake():
         for i in range(1, len(self.parts)):
             if pygame.sprite.collide_rect(self.head, self.parts[i]):
                 self.head.kill()
+                self.death_sound.play()
                 return True
         return False
 
 class Button(pygame.sprite.Sprite):
-
     def __init__(self, left, top, on_click):
         super().__init__()
         self.surface = pygame.image.load("res/images/SettingsIcon.PNG").convert()
@@ -194,12 +198,10 @@ class SettingsMenu(tkinter.Frame):
                 command = lambda x=value: self.game.snake.change_color(x)
             )
             color_btn.grid(column = next_column, row = 0, padx = 1)
-            next_column+=1
+            next_column += 1
 
 class Game():
-
     ADDFOOD = pygame.USEREVENT + 1  #Custom Event used to spawn food at regular intervals
-    
     def __init__(self):
         pygame.display.set_caption("Snake Game")
         self.window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -267,8 +269,8 @@ class Game():
 
     #Renders all sprites to the screen and displays the score
     def render(self):
-        self.window.fill((0,0,0))   #Resets the screen to blank
-        self.snake.animate()
+        self.window.fill((0,0,0))   #Erases all drawings from last frame
+        self.snake.animate()        
         for sprite in self.sprites:
             self.window.blit(sprite.surface, sprite.rect)
         self.display_scores()
