@@ -9,7 +9,8 @@ WINDOW_WIDTH = 700
 WINDOW_HEIGHT = 500
 
 pygame.init()
-FONT = pygame.freetype.Font("res/fonts/JOKERMAN.TTF", 17)
+JOKERMAN = pygame.freetype.Font("res/fonts/JOKERMAN.ttf", 17)
+EIGHT_BIT = pygame.freetype.Font("res/fonts/8-BIT.ttf", 22)
 
 #All game objects have a surface and a rect describing their location
 class GameObject(pygame.sprite.Sprite):
@@ -254,6 +255,7 @@ class Game():
         self.settings_btn = Button("res/images/SettingsIcon.PNG", WINDOW_WIDTH - 50, 8, self.pause)
         self.highscore = self.read_highscore()
 
+    #Pauses the game and displays the settings menu
     def pause(self):
         pygame.time.set_timer(Game.ADDFOOD, 0)      #Food must not be added while the game is paused
         SettingsMenu(self)                         
@@ -275,17 +277,19 @@ class Game():
             file.truncate(0)
             file.write(str(self.highscore))
 
+    #Checks if the current score is greater than the high score, if so, the highscore's value is the same as the score
     def update_highscore(self):
         if len(self.snake.parts) > self.highscore:
             self.highscore = len(self.snake.parts)
 
     def display_scores(self):
-        score = FONT.render("Length: " + str(len(self.snake.parts)), (0, 255, 255))
-        highscore = FONT.render("Best Length: " + str(self.highscore), (0, 255, 255))
+        score = JOKERMAN.render("Length: " + str(len(self.snake.parts)), (0, 255, 255))
+        highscore = JOKERMAN.render("Best Length: " + str(self.highscore), (0, 255, 255))
         self.window.blit(score[0], (10, 10))
         self.window.blit(highscore[0], (WINDOW_WIDTH/2 - highscore[1].width/2, 10))
 
-    #Called at the beginning of the game and then each time the player loses and decides to play again
+    #Called at the beginning of the game and then each time the player loses and decides to play again.
+    #Color and secondary color are supplied based on the snake's color and secondary color's values at the time the snake died.
     def newgame(self, color, secondary_color):
         self.snake = Snake(color, secondary_color, 5)
         self.food = pygame.sprite.Group()
@@ -315,7 +319,16 @@ class Game():
         self.window.blit(self.settings_btn.surface, self.settings_btn.rect)
         pygame.display.flip()
 
+    def you_lose(self):
+        self.window.fill((0,0,0))
+        self.display_scores()
+        you_lose = EIGHT_BIT.render("Game Over, press ENTER to replay or ESC to quit.", (255,255,255))
+        self.window.blit(you_lose[0], (15, WINDOW_HEIGHT/2))
+        pygame.display.flip()
+
+    #Called when the snake dies, allowing the player to play again or quit
     def game_over(self):
+        self.you_lose()
         deciding = True     
         while deciding:
             for event in pygame.event.get():
@@ -327,7 +340,11 @@ class Game():
                         self.newgame(self.snake.color, self.snake.secondary_color)
                         self.loop()
                         deciding = False
+                    elif event.key == pygame.K_ESCAPE:
+                        deciding = False
+                        self.running = False
 
+    #Game loop
     def loop(self):
         while self.running:
             self.handle_events()
@@ -347,5 +364,5 @@ class Game():
         self.write_highscore()
 
 game = Game()
-game.newgame((255,255,255), (0,0,0))
+game.newgame((0,255,255), (0,0,0))
 game.loop()
