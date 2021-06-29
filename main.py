@@ -5,8 +5,8 @@ import pygame
 import pygame.freetype
 
 #Game window dimensions
-WINDOW_WIDTH = 700
-WINDOW_HEIGHT = 500
+WINDOW_WIDTH = 500
+WINDOW_HEIGHT = 400
 
 pygame.init()
 JOKERMAN = pygame.freetype.Font("res/fonts/JOKERMAN.ttf", 17)
@@ -25,8 +25,7 @@ class Food(GameObject):
         left = random.randint(0, WINDOW_WIDTH/10) * 10
         top = random.randint(4, WINDOW_HEIGHT/10) * 10 
         super().__init__(left, top)
-        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        self.surface.fill(color)
+        self.surface = pygame.image.load("res/images/apple.jpg")
 
 #Represents each part of the snake
 class BodyPart(GameObject):
@@ -168,7 +167,6 @@ class Snake():
     def collided_body(self):
         for i in range(1, len(self.parts)):
             if pygame.sprite.collide_rect(self.head, self.parts[i]):
-                self.head.kill()
                 return True
         return False
 
@@ -203,34 +201,75 @@ class Button(pygame.sprite.Sprite):
                 self.on_click()
 
 #Menu used to pause game and manipulate game settings
-class SettingsMenu(tkinter.Frame):
+class SettingsMenu():
     def __init__(self, game):
         self.game = game
         self.window = tkinter.Tk()
-        self.window.geometry("240x360")
+        self.window.title(string = "Settings")
+        self.frame = tkinter.Frame(master = self.window)
+        self.frame.pack()
+        self.window.minsize(width = 220, height = 220)
         self.add_widgets()
+        self.center(self.window)
+        self.window.mainloop()
+
+    #Centers the window mid-screen
+    def center(self, window):
+        window.update_idletasks()                          #called to update the dimensions of the window
+        window_width = window.winfo_width()
+        window_height = window.winfo_height()
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+        window_x = int(screen_width/2 - window_width/2)
+        window_y = int(screen_height/3 - window_height/3)
+        window.geometry("+{}+{}".format(window_x, window_y))
+
+    def sound_widget(self):
+        sound = tkinter.BooleanVar()          #keeps track of the sound_checkbtn's state
+        sound.set(self.game.sound)        #the state must match the value of sound in the game
+        def on_toggle():
+            if sound.get():
+                self.game.sound = True
+            else:
+                self.game.sound = False
+        sound_checkbtn = tkinter.Checkbutton(master = self.frame, text = "Sound Effects",
+                                             variable = sound, command = on_toggle)
+        sound_checkbtn.pack(pady = 7)
+
+    #Window to confirm the resetting of the highscore
+    def confirm_window(self):
+        window = tkinter.Toplevel(self.window)
+        window.title(string = "Confirm")
+        label = tkinter.Label(master = window, text = "Do you wish to reset the current highscore?", fg = "red")
+        label.pack()
+        btn_frame = tkinter.Frame(master = window)
+        btn_frame.pack()
+        def on_click_yes():
+            self.game.reset_highscore()
+            window.destroy()
+        def on_click_no():
+            window.destroy()
+        yes_btn = tkinter.Button(master = btn_frame, text = "Yes", fg = "black", command = on_click_yes)
+        no_btn = tkinter.Button(master = btn_frame, text = "No", fg = "black", command = on_click_no)
+        yes_btn.pack(side = tkinter.LEFT, padx = 5, pady = 1)
+        no_btn.pack(side = tkinter.LEFT, padx = 5, pady = 1)
+        self.center(window)
+
+    def add_widgets(self):
+        paused_lbl = tkinter.Label(master = self.frame, text = "Paused", fg = "red", font = "Times 18")
+        paused_lbl.pack()
+        self.sound_widget()
         colors = dict(black = "#000000", orange = "#FFA500", red = "#FF0000", cyan = "#00FFFF",
                       pink = "#FFC0CB", white = "#FFFFFF", blue = "#0000FF", neongreen = "#39FF14",
                       purple = "#800080", peach = "#FFE5B4")     
         self.color_options("Color: ", colors, self.game.snake.change_color)                         #Primary colors
         self.color_options("Secondary Color: ", colors, self.game.snake.change_sec_color)           #Secondary colors
-        self.window.mainloop()
+        reset_btn = tkinter.Button(master = self.frame, text = "Reset Highscore",
+                                   fg = "black", bd = 3, command = self.confirm_window)
+        reset_btn.pack(pady = 7)
 
-    def add_widgets(self):
-        self.frame = tkinter.Frame(master = self.window)
-        self.frame.pack()
-        paused_lbl = tkinter.Label(master = self.frame, text = "Paused", fg = "red", font = "Times 18")
-        paused_lbl.pack()
-        sound = tkinter.IntVar()          #keeps track of the sound_checkbtn's state
-        sound.set(self.game.sound)        #the state must match the value of sound in the game
-        def on_sound_toggle():
-            if sound.get() == 0:
-                self.game.sound = False
-            else:
-                self.game.sound = True
-        sound_checkbtn = tkinter.Checkbutton(master = self.frame, text = "Sound Effects",
-                                             variable = sound, command = on_sound_toggle)
-        sound_checkbtn.pack(pady = 10)
+        quit_btn = tkinter.Button(master = self.frame, fg = "black", text = "Quit")
+        quit_btn.pack()
 
     #Displays color buttons with a description of what the buttons are used for.
     #Used for changing the primary and secondary colors of the snake.
@@ -271,11 +310,17 @@ class Game():
             except ValueError:
                 return 0
     
-    #Erases all data from the file and writes the new highscore
+    #Overwrites the old highscore with the current highscore
     def write_highscore(self):
         with open("storage/highscore.txt", "r+") as file:
             file.truncate(0)
             file.write(str(self.highscore))
+
+    #Deletes the saved highscore
+    def reset_highscore(self):
+        with open("storage/highscore.txt", "r+") as file:
+            file.truncate(0)
+        self.highscore = 0
 
     #Checks if the current score is greater than the high score, if so, the highscore's value is the same as the score
     def update_highscore(self):
@@ -319,6 +364,7 @@ class Game():
         self.window.blit(self.settings_btn.surface, self.settings_btn.rect)
         pygame.display.flip()
 
+    #Displays game over text
     def you_lose(self):
         self.window.fill((0,0,0))
         self.display_scores()
@@ -353,7 +399,6 @@ class Game():
             if self.snake.collided_body():
                 self.snake.death_sound.play(self.sound)
                 self.game_over()
-                break
             if self.snake.collided_food(self.food, self.sprites):
                 self.snake.eat_sound.play(self.sound)
                 self.update_highscore()
