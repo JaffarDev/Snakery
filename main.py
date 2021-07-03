@@ -10,27 +10,23 @@ WINDOW_HEIGHT = 400
 
 pygame.init()
 JOKERMAN = pygame.freetype.Font("res/fonts/JOKERMAN.ttf", 17)
-EIGHT_BIT = pygame.freetype.Font("res/fonts/8-BIT.ttf", 22)
+EIGHT_BIT = pygame.freetype.Font("res/fonts/8-BIT.ttf", 17)
 
-#All game objects have a surface and a rect describing their location
-class GameObject(pygame.sprite.Sprite):
-    def __init__(self, left, top):
+#Spawns at a random location within the screen, snake grows when collided with this game object
+class Food(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        left = random.randint(0, WINDOW_WIDTH/10 - 1) * 10
+        top = random.randint(5, WINDOW_HEIGHT/10 - 1) * 10 
+        self.surface = pygame.image.load("res/images/apple.jpg")
+        self.rect = self.surface.get_rect(topleft = (left, top))
+
+#Represents each part of the snake
+class BodyPart(pygame.sprite.Sprite):
+    def __init__(self, color, left, top):
         super().__init__()
         self.surface = pygame.Surface((10, 10))
         self.rect = self.surface.get_rect(topleft = (left, top))
-
-#Spawns at a random location within the screen, snake grows when collided with this game object
-class Food(GameObject):
-    def __init__(self):
-        left = random.randint(0, WINDOW_WIDTH/10) * 10
-        top = random.randint(4, WINDOW_HEIGHT/10) * 10 
-        super().__init__(left, top)
-        self.surface = pygame.image.load("res/images/apple.jpg")
-
-#Represents each part of the snake
-class BodyPart(GameObject):
-    def __init__(self, color, left, top):
-        super().__init__(left, top)
         self.surface.fill(color)
 
 #Controls where the snake will go
@@ -44,19 +40,19 @@ class Head(BodyPart):
     #Snake cannot go in the opposite of its current direction, as it would result in instant death
     def change_direction(self, pressed_keys):
         if pressed_keys[pygame.K_UP] or pressed_keys[pygame.K_w]:
-            if self.y_speed != self.rect.height:
+            if self.y_speed == 0:
                 self.x_speed = 0
                 self.y_speed = -self.rect.height
         elif pressed_keys[pygame.K_DOWN] or pressed_keys[pygame.K_s]:
-            if self.y_speed != -self.rect.height:
+            if self.y_speed == 0:
                 self.x_speed = 0
                 self.y_speed = self.rect.height
         elif pressed_keys[pygame.K_LEFT] or pressed_keys[pygame.K_a]:
-            if self.x_speed != self.rect.width:
+            if self.x_speed == 0:
                 self.x_speed = -self.rect.width
                 self.y_speed = 0
         elif pressed_keys[pygame.K_RIGHT] or pressed_keys[pygame.K_d]:
-            if self.x_speed != -self.rect.width:
+            if self.x_speed == 0:
                 self.x_speed = self.rect.width
                 self.y_speed = 0
 
@@ -68,10 +64,10 @@ class Head(BodyPart):
             self.rect.left = WINDOW_WIDTH - self.rect.width
         elif self.rect.left + self.rect.width > WINDOW_WIDTH:
             self.rect.left = 0
-        elif self.rect.top < 0:
+        elif self.rect.top < 50:
             self.rect.top = WINDOW_HEIGHT - self.rect.height
         elif self.rect.top + self.rect.height > WINDOW_HEIGHT:
-            self.rect.top = 0
+            self.rect.top = 50
 
     #Draws a set of eyes on the head, the location of the eyes is dependent on the speed of the head
     def draw_eyes(self, color):
@@ -121,13 +117,13 @@ class Snake():
             x_diff = self.parts[i].rect.left - self.parts[i+1].rect.left
             y_diff = self.parts[i].rect.top - self.parts[i+1].rect.top
             if x_diff > 0:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (0,9), 1)
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (1,1), (1,8), 1)
             elif x_diff < 0:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (9,0), (9,9), 1)
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (8,1), (8,8), 1)
             elif y_diff > 0:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (9,0), 1)
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (1,1), (8,1), 1)
             else:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,9), (9,9), 1)
+                pygame.draw.line(self.parts[i].surface, self.secondary_color, (1,8), (8,8), 1)
     
     #Renders the snake
     #The method fill is called for every part to erase stripes/eyes drawn in previous frames
@@ -163,7 +159,7 @@ class Snake():
             return True
         return False
 
-    #The game is over when the head hits the body
+    #Check if the snake's head collided its body
     def collided_body(self):
         for i in range(1, len(self.parts)):
             if pygame.sprite.collide_rect(self.head, self.parts[i]):
@@ -203,57 +199,79 @@ class Button(pygame.sprite.Sprite):
 #Menu used to pause game and manipulate game settings
 class SettingsMenu():
     def __init__(self, game):
-        self.game = game
-        self.window = tkinter.Tk()
-        self.window.title(string = "Settings")
-        self.frame = tkinter.Frame(master = self.window)
+        self.root = tkinter.Tk()
+        self.root.title(string = "Settings")
+        self.root.minsize(width = 220, height = 210)
+        self.frame = tkinter.Frame(master = self.root)
         self.frame.pack()
-        self.window.minsize(width = 220, height = 220)
+        self.game = game
+        self.sound = tkinter.BooleanVar()
+        self.confirmation = False                       #Keeps track of whether the reset highscore confirmation window is on-screen
         self.add_widgets()
-        self.center(self.window)
-        self.window.mainloop()
+        self.center(self.root)
+        self.check_quit()
+        self.root.mainloop()
 
-    #Centers the window mid-screen
+    #Periodically check for the pygame quit event, in which case the program is exited
+    #Without this check, the program will not respond to the quit event on the pygame window
+    def check_quit(self):
+        if pygame.event.get(eventtype = pygame.QUIT):
+            self.game.running = False
+            self.root.destroy()
+        self.root.after(250, self.check_quit)
+
+    #Centers a window mid-screen
     def center(self, window):
-        window.update_idletasks()                          #called to update the dimensions of the window
+        window.update_idletasks()                               #called to update the dimensions of the window
         window_width = window.winfo_width()
         window_height = window.winfo_height()
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
         window_x = int(screen_width/2 - window_width/2)
         window_y = int(screen_height/3 - window_height/3)
-        window.geometry("+{}+{}".format(window_x, window_y))
+        window.geometry(f"+{window_x}+{window_y}")
 
+    #Called when the sound checkbutton is clicked
+    def on_toggle(self):
+        if self.sound.get():
+            self.game.sound = True
+        else:
+            self.game.sound = False
+
+    #Widget to enable/disable sound effects in the game
     def sound_widget(self):
-        sound = tkinter.BooleanVar()          #keeps track of the sound_checkbtn's state
-        sound.set(self.game.sound)        #the state must match the value of sound in the game
-        def on_toggle():
-            if sound.get():
-                self.game.sound = True
-            else:
-                self.game.sound = False
+        self.sound.set(self.game.sound)       
         sound_checkbtn = tkinter.Checkbutton(master = self.frame, text = "Sound Effects",
-                                             variable = sound, command = on_toggle)
+                                             variable = self.sound, command = self.on_toggle)
         sound_checkbtn.pack(pady = 7)
 
-    #Window to confirm the resetting of the highscore
+    def reset_highscore(self):
+        self.game.reset_highscore()
+        self.game.update_highscore()
+        self.exit_conf_window()
+
+    #Exits the reset highscore confirmation window
+    def exit_conf_window(self):
+        self.confirmation = False
+        self.window.destroy()
+
+    #Window used to confirm the resetting of the highscore
     def confirm_window(self):
-        window = tkinter.Toplevel(self.window)
-        window.title(string = "Confirm")
-        label = tkinter.Label(master = window, text = "Do you wish to reset the current highscore?", fg = "red")
+        if self.confirmation:
+            return
+        self.window = tkinter.Toplevel(self.root)
+        self.window.title(string = "Confirm")
+        self.window.protocol("WM_DELETE_WINDOW", self.exit_conf_window)
+        label = tkinter.Label(master = self.window, text = "Do you wish to reset the current highscore?", fg = "red")
         label.pack()
-        btn_frame = tkinter.Frame(master = window)
+        btn_frame = tkinter.Frame(master = self.window)
         btn_frame.pack()
-        def on_click_yes():
-            self.game.reset_highscore()
-            window.destroy()
-        def on_click_no():
-            window.destroy()
-        yes_btn = tkinter.Button(master = btn_frame, text = "Yes", fg = "black", command = on_click_yes)
-        no_btn = tkinter.Button(master = btn_frame, text = "No", fg = "black", command = on_click_no)
+        yes_btn = tkinter.Button(master = btn_frame, text = "Yes", fg = "black", command = self.reset_highscore)
+        no_btn = tkinter.Button(master = btn_frame, text = "No", fg = "black", command = self.exit_conf_window)
         yes_btn.pack(side = tkinter.LEFT, padx = 5, pady = 1)
         no_btn.pack(side = tkinter.LEFT, padx = 5, pady = 1)
-        self.center(window)
+        self.center(self.window)
+        self.confirmation = True
 
     def add_widgets(self):
         paused_lbl = tkinter.Label(master = self.frame, text = "Paused", fg = "red", font = "Times 18")
@@ -268,9 +286,6 @@ class SettingsMenu():
                                    fg = "black", bd = 3, command = self.confirm_window)
         reset_btn.pack(pady = 7)
 
-        quit_btn = tkinter.Button(master = self.frame, fg = "black", text = "Quit")
-        quit_btn.pack()
-
     #Displays color buttons with a description of what the buttons are used for.
     #Used for changing the primary and secondary colors of the snake.
     def color_options(self, desc, colors, on_click):
@@ -284,7 +299,7 @@ class SettingsMenu():
             color_btn.pack(side = tkinter.LEFT)
 
 class Game():
-    ADDFOOD = pygame.USEREVENT + 1  #Custom Event used to spawn food at regular intervals
+    ADDFOOD = pygame.USEREVENT + 1  #Custom Event used to spawn food a short while after the game starts
     def __init__(self):
         pygame.display.set_caption("Snake Game")
         self.window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -295,10 +310,10 @@ class Game():
         self.highscore = self.read_highscore()
 
     #Pauses the game and displays the settings menu
+    #MOUSEBUTTONUP events are cleared to avoid the spawning of multiple settings menus
     def pause(self):
-        pygame.time.set_timer(Game.ADDFOOD, 0)      #Food must not be added while the game is paused
-        SettingsMenu(self)                         
-        pygame.time.set_timer(Game.ADDFOOD, 1500)
+        SettingsMenu(self)
+        pygame.event.clear(eventtype = pygame.MOUSEBUTTONUP)
     
     #Reads the highscore from a local file
     #If the file is empty or the data in the file is not convertable to int (not a number) then 0 is returned
@@ -337,10 +352,16 @@ class Game():
     #Color and secondary color are supplied based on the snake's color and secondary color's values at the time the snake died.
     def newgame(self, color, secondary_color):
         self.snake = Snake(color, secondary_color, 5)
-        self.food = pygame.sprite.Group()
-        self.sprites = pygame.sprite.Group()
-        self.sprites.add(iter(self.snake.parts))
-        pygame.time.set_timer(Game.ADDFOOD, 1500)
+        self.food = pygame.sprite.Group()                   #Used to detect collision of the head with food
+        self.sprites = pygame.sprite.Group()                #Every sprite is added to this group for rendering
+        self.sprites.add(iter(self.snake.parts))            #Add all of the snake's parts
+        self.update_highscore()
+        pygame.time.set_timer(Game.ADDFOOD, 1500, True)     #A one-time timer to spawn the food 1.5 secs after the game started
+
+    def spawn_food(self):
+        food = Food()
+        self.sprites.add(food)
+        self.food.add(food)
 
     #Called at each frame to handle the game's events
     def handle_events(self):
@@ -348,9 +369,7 @@ class Game():
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == Game.ADDFOOD:
-                food = Food()
-                self.sprites.add(food)
-                self.food.add(food)
+                self.spawn_food()
             elif event.type == pygame.MOUSEBUTTONUP:
                 self.settings_btn.was_clicked(event.pos[0], event.pos[1])
 
@@ -399,15 +418,19 @@ class Game():
             if self.snake.collided_body():
                 self.snake.death_sound.play(self.sound)
                 self.game_over()
+                break
             if self.snake.collided_food(self.food, self.sprites):
                 self.snake.eat_sound.play(self.sound)
                 self.update_highscore()
+                self.spawn_food()
             else:
                 self.snake.slither()
             self.render()
             self.clock.tick(15)
         self.write_highscore()
 
-game = Game()
-game.newgame((0,255,255), (0,0,0))
-game.loop()
+#Entry point
+if __name__ == '__main__':
+    game = Game()
+    game.newgame((0,255,255), (0,0,0))
+    game.loop()

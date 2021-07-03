@@ -1,0 +1,2 @@
+1. Snake stripes not aligned
+2. Food spawns on snake
