@@ -1,3 +1,10 @@
+#Snake Game by Jaffar Alzeidi
+#This is a snake game made with pygame
+#The objective is to eat food and get as large as possible without colliding with the body of the snake
+#Highscore saves to a local file
+#The game's pause menu is made with tkinter
+#Last modified on 07/04/2021
+
 import random
 import tkinter
 import functools
@@ -9,10 +16,10 @@ WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 400
 
 pygame.init()
-JOKERMAN = pygame.freetype.Font("res/fonts/JOKERMAN.ttf", 17)
-EIGHT_BIT = pygame.freetype.Font("res/fonts/8-BIT.ttf", 17)
+JOKERMAN = pygame.freetype.Font("res/fonts/JOKERMAN.ttf", 17)   #Font used to display scores
+EIGHT_BIT = pygame.freetype.Font("res/fonts/8-BIT.ttf", 17)     #Font used to display game over text
 
-#Spawns at a random location within the screen, snake grows when collided with this game object
+#Spawns at a random location within the screen, the snake grows when collided with this game object
 class Food(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -37,7 +44,7 @@ class Head(BodyPart):
         self.y_speed = 0
 
     #Changes the direction of the head based on key press
-    #Snake cannot go in the opposite of its current direction, as it would result in instant death
+    #Head cannot go in the opposite of its current direction, as it would result in instant death
     def change_direction(self, pressed_keys):
         if pressed_keys[pygame.K_UP] or pressed_keys[pygame.K_w]:
             if self.y_speed == 0:
@@ -57,7 +64,7 @@ class Head(BodyPart):
                 self.y_speed = 0
 
     #Moves the head's location based on the current direction.
-    #Checks if the head has moved beyond the window, in which case it comes out of the other side of the window.
+    #Checks if the head has moved beyond the playable area, in which case it comes out of the other side of the playable area
     def move(self):
         self.rect.move_ip(self.x_speed, self.y_speed)
         if self.rect.left < 0:
@@ -95,6 +102,8 @@ class Snake():
         self.eat_sound = Sound("res/sounds/bite.WAV")
         self.death_sound = Sound("res/sounds/death.WAV")
 
+    #Creates the head and the snake's body parts. This method is called when the game starts, and every time the player
+    #chooses to play again
     def construct(self):
         self.head = Head(self.color, WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
         self.parts = []
@@ -105,11 +114,11 @@ class Snake():
             part = BodyPart(self.color, left, top)
             self.parts.append(part)
 
+    #Changes the snake's primary color
     def change_color(self, hex_color):
         self.color = Color.to_rgb(hex_color)
-        for part in self.parts:
-            part.surface.fill(self.color)
 
+    #Changes the snake's secondary color
     def change_sec_color(self, hex_color):
         self.secondary_color = Color.to_rgb(hex_color)
 
@@ -145,7 +154,7 @@ class Snake():
         self.head.move()
     
     #Adds a new BodyPart to the snake, placing it at the snake's head's location, the snake's head is then moved.
-    #NOTE: if grow is called, there is no need to call slither during the same frame because grow places the newly created part
+    #NOTE: if grow is called, slither shouldn't be called during the same frame because grow places the newly created part
     #in the head's location, the the head is moved, thus creating the slither effect in a more efficient way
     def grow(self):
         part = BodyPart(self.color, self.head.rect.left, self.head.rect.top)
@@ -153,19 +162,17 @@ class Snake():
         self.head.move()
         return part
 
-    #Checks if the snake's head collided with food, in which case it grows
-    def head_collided_food(self, food_list, sprites):
-        food_eaten = pygame.sprite.spritecollide(self.head, food_list, True)
-        if len(food_eaten) != 0:
-            new_part = self.grow()
-            sprites.add(new_part)
+    #Checks if the snake's head collided with food
+    def head_collided_food(self, food_list):
+        if pygame.sprite.spritecollide(self.head, food_list, True):
             return True
         return False
 
+    #Checks if any part of the snake has collided with food, this is called to make sure that newly spawned food does not
+    #spawn on top of the snake
     def collided_food(self, food):
         for part in self.parts:
             if pygame.sprite.collide_rect(part, food):
-                food.kill()
                 return True
         return False
 
@@ -361,18 +368,20 @@ class Game():
 
     #Called at the beginning of the game and then each time the player loses and decides to play again.
     #Color and secondary color are supplied based on the snake's color and secondary color's values at the time the snake died.
-    def newgame(self):
+    def init(self):
         self.snake.construct()
-        self.food_list = pygame.sprite.Group()                   #Used to detect collision of the head with foodw
+        self.food_list = pygame.sprite.Group()              #Used to detect collision of the head with food
         self.sprites = pygame.sprite.Group()                #Every sprite is added to this group for rendering
         self.sprites.add(iter(self.snake.parts))            #Add all of the snake's parts
         self.update_highscore()
         pygame.time.set_timer(Game.ADDFOOD, 1500, True)     #A one-time timer to spawn the food 1.5 secs after the game started
 
-    #If the food is spawned somewhere that collides with the snake, the food is respawned
+    #Spawns food in a random place on the map
+    #If the food is spawned somewhere that collides with the snake, the food is respawned until it find an empty spot
     def spawn_food(self):
         food = Food()
         if self.snake.collided_food(food):
+            food.kill()
             self.spawn_food()
         else: 
             self.sprites.add(food)
@@ -388,13 +397,13 @@ class Game():
             elif event.type == pygame.MOUSEBUTTONUP:
                 self.settings_btn.was_clicked(event.pos[0], event.pos[1])
 
+    #Borders visibly define the playable area on the window
     def draw_borders(self):
         pygame.draw.line(self.window, (255, 255, 255), (0, 50), (WINDOW_WIDTH-1, 50), 1)
         pygame.draw.line(self.window, (255, 255, 255), (0, WINDOW_HEIGHT-1), (WINDOW_WIDTH-1, WINDOW_HEIGHT-1), 1)
         pygame.draw.line(self.window, (255, 255, 255), (0, 0), (0, WINDOW_HEIGHT-1), 1)
         pygame.draw.line(self.window, (255, 255, 255), (WINDOW_WIDTH-1, 0), (WINDOW_WIDTH-1, WINDOW_HEIGHT-1), 1)
 
-    #Renders all sprites to the screen and displays the score
     def render(self):
         self.window.fill((0,0,0))   #Erases all drawings from last frame
         self.snake.render()
@@ -419,17 +428,14 @@ class Game():
         deciding = True     
         while deciding:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+                if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     deciding = False
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        self.newgame()
+                        self.init()
                         self.loop()
                         deciding = False
-                    elif event.key == pygame.K_ESCAPE:
-                        deciding = False
-                        self.running = False
 
     #Game loop
     def loop(self):
@@ -441,7 +447,9 @@ class Game():
                 self.snake.death_sound.play(self.sound)
                 self.game_over()
                 break
-            if self.snake.head_collided_food(self.food_list, self.sprites):
+            if self.snake.head_collided_food(self.food_list):
+                new_part = self.snake.grow()
+                self.sprites.add(new_part)
                 self.snake.eat_sound.play(self.sound)
                 self.update_highscore()
                 self.spawn_food()
@@ -454,5 +462,5 @@ class Game():
 #Entry point
 if __name__ == '__main__':
     game = Game()
-    game.newgame()
+    game.init()
     game.loop()
