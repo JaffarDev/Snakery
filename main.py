@@ -121,21 +121,6 @@ class Snake():
     #Changes the snake's secondary color
     def change_sec_color(self, hex_color):
         self.secondary_color = Color.to_rgb(hex_color)
-
-    #Draws stripes on each snake part.
-    #Each part has a stripe between it and the block after it in the list of parts.
-    def draw_stripes(self):
-        for i in range(len(self.parts)-1):
-            x_diff = self.parts[i].rect.left - self.parts[i+1].rect.left
-            y_diff = self.parts[i].rect.top - self.parts[i+1].rect.top
-            if x_diff > 0:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (0,9), 1)
-            elif x_diff < 0:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (9,0), (9,9), 1)
-            elif y_diff > 0:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,0), (9,0), 1)
-            else:
-                pygame.draw.line(self.parts[i].surface, self.secondary_color, (0,9), (9,9), 1)
     
     #Renders the snake
     #The method fill is called for every part to erase stripes/eyes drawn in previous frames
@@ -143,7 +128,6 @@ class Snake():
         for part in self.parts:
             part.surface.fill(self.color)
         self.head.draw_eyes(self.secondary_color)
-        self.draw_stripes()
 
     #The snake is moved by moving each part to the location of the part before it in the list of parts (except the head)
     def slither(self):
@@ -216,14 +200,17 @@ class Button(pygame.sprite.Sprite):
 #Menu used to pause game and manipulate game settings
 class SettingsMenu():
     def __init__(self, game):
+        self.bg = "#87CEEB"                             #background color of the window
         self.root = tkinter.Tk()
         self.root.title(string = "Settings")
         self.root.minsize(width = 220, height = 210)
-        self.frame = tkinter.Frame(master = self.root)
+        self.root.configure(bg = self.bg)
+        self.root.resizable(False, False)
+        self.frame = tkinter.Frame(master = self.root, bg = self.bg)
         self.frame.pack()
         self.game = game
-        self.sound = tkinter.BooleanVar()
-        self.confirmation = False                       #Keeps track of whether the reset highscore confirmation window is on-screen
+        self.sound = tkinter.BooleanVar()               #keeps track of the sound checkbutton's status
+        self.confirmation = False                       #True when the conf_window is on screen, false otherwise
         self.add_widgets()
         self.center(self.root)
         self.check_quit()
@@ -259,10 +246,10 @@ class SettingsMenu():
     def sound_widget(self):
         self.sound.set(self.game.sound)       
         sound_checkbtn = tkinter.Checkbutton(master = self.frame, text = "Sound Effects",
-                                             variable = self.sound, command = self.on_toggle)
+                                             variable = self.sound, command = self.on_toggle, bg = self.bg)
         sound_checkbtn.pack(pady = 7)
 
-    def reset_highscore(self):
+    def on_reset(self):
         self.game.reset_highscore()
         self.game.update_highscore()
         self.exit_conf_window()
@@ -270,28 +257,33 @@ class SettingsMenu():
     #Exits the reset highscore confirmation window
     def exit_conf_window(self):
         self.confirmation = False
-        self.window.destroy()
+        self.conf_window.destroy()
 
-    #Window used to confirm the resetting of the highscore
+    #Window used to confirm the resetting of the highscore.
+    #If confirmation is true, then there is already a confirmation window on the screen, therefore there is no need to display
+    #another one.
     def confirm_window(self):
         if self.confirmation:
             return
-        self.window = tkinter.Toplevel(self.root)
-        self.window.title(string = "Confirm")
-        self.window.protocol("WM_DELETE_WINDOW", self.exit_conf_window)
-        label = tkinter.Label(master = self.window, text = "Do you wish to reset the current highscore?", fg = "red")
+        self.conf_window = tkinter.Toplevel(self.root)
+        self.conf_window.title(string = "Confirm")
+        self.conf_window.configure(bg = self.bg)
+        self.conf_window.resizable(False, False)
+        self.conf_window.focus_set()
+        self.conf_window.protocol("WM_DELETE_WINDOW", self.exit_conf_window)
+        label = tkinter.Label(master = self.conf_window, text = "Do you wish to reset the current highscore?", fg = "red", bg = self.bg)
         label.pack()
-        btn_frame = tkinter.Frame(master = self.window)
+        btn_frame = tkinter.Frame(master = self.conf_window, bg = self.bg)
         btn_frame.pack()
-        yes_btn = tkinter.Button(master = btn_frame, text = "Yes", fg = "black", command = self.reset_highscore)
+        yes_btn = tkinter.Button(master = btn_frame, text = "Yes", fg = "black", command = self.on_reset)
         no_btn = tkinter.Button(master = btn_frame, text = "No", fg = "black", command = self.exit_conf_window)
         yes_btn.pack(side = tkinter.LEFT, padx = 5, pady = 1)
         no_btn.pack(side = tkinter.LEFT, padx = 5, pady = 1)
-        self.center(self.window)
+        self.center(self.conf_window)
         self.confirmation = True
 
     def add_widgets(self):
-        paused_lbl = tkinter.Label(master = self.frame, text = "Paused", fg = "red", font = "Times 18")
+        paused_lbl = tkinter.Label(master = self.frame, text = "Paused", fg = "red", bg = self.bg, font = "Times 18")
         paused_lbl.pack()
         self.sound_widget()
         colors = dict(black = "#000000", orange = "#FFA500", red = "#FF0000", cyan = "#00FFFF",
@@ -306,13 +298,13 @@ class SettingsMenu():
     #Displays color buttons with a description of what the buttons are used for.
     #Used for changing the primary and secondary colors of the snake.
     def color_options(self, desc, colors, on_click):
-        colors_lbl = tkinter.Label(master = self.frame, text = desc)
+        colors_lbl = tkinter.Label(master = self.frame, text = desc, bg = self.bg)
         colors_lbl.pack()
         colors_frm = tkinter.Frame(master = self.frame)
         colors_frm.pack()
         for key, value in colors.items():
             color_btn = tkinter.Button(master = colors_frm, width = 1, height = 1, 
-                                       bg = value, command = functools.partial(on_click, value))
+                                       bg = value, bd = 3, command = functools.partial(on_click, value))
             color_btn.pack(side = tkinter.LEFT)
 
 class Game():
