@@ -3,35 +3,22 @@
 #The objective is to eat food and get as large as possible without colliding with the body of the snake.
 #Highscore saves to a local file.
 #The game's pause menu is made with tkinter.
-#Last modified on 07/09/2021.
+#Last modified on 07/11/2021.
 
 import random
 import tkinter
 import functools
 import pygame
 import pygame.freetype
-import os
-import sys
+import file
 
 #Game window dimensions.
-WINDOW_WIDTH = 500
-WINDOW_HEIGHT = 400
-
-#Helper class to deal with files
-class File():
-    #Locates the given resource's path
-    #Resources are in a temp folder if the program was launched from a pyinstaller executable
-    #If the program was run from a development environment, the resources folder is in the project's root directory
-    def locate(relative_path):
-        try:
-            base_path = sys._MEIPASS
-        except Exception:
-            base_path = os.path.abspath(".")
-        return os.path.join(base_path, relative_path)
-
-pygame.init()                                                              #Initialize the pygame module.
-JOKERMAN = pygame.freetype.Font(File.locate("res/fonts/JOKERMAN.ttf"), 17)   #Font used to display scores.
-EIGHT_BIT = pygame.freetype.Font(File.locate("res/fonts/8-BIT.ttf"), 17)     #Font used to display game over text.
+WIDTH = 500
+HEIGHT = 400
+    
+pygame.init()                                                                #Initialize the pygame module.
+JOKERMAN = pygame.freetype.Font(file.locate("res/fonts/JOKERMAN.ttf"), 17)   #Font used to display scores.
+EIGHT_BIT = pygame.freetype.Font(file.locate("res/fonts/8-BIT.ttf"), 17)     #Font used to display game over text.
 
 CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
@@ -41,9 +28,9 @@ WHITE = (255, 255, 255)
 class Food(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        left = random.randint(0, WINDOW_WIDTH/10 - 1) * 10
-        top = random.randint(5, WINDOW_HEIGHT/10 - 1) * 10 
-        self.surface = pygame.image.load(File.locate("res/images/apple.jpg"))
+        left = random.randint(0, WIDTH/10 - 1) * 10
+        top = random.randint(5, HEIGHT/10 - 1) * 10 
+        self.surface = pygame.image.load(file.locate("res/images/apple.jpg"))
         self.rect = self.surface.get_rect(topleft = (left, top))
 
 #Represents each part of the snake.
@@ -86,12 +73,12 @@ class Head(BodyPart):
     def move(self):
         self.rect.move_ip(self.x_speed, self.y_speed)
         if self.rect.left < 0:
-            self.rect.left = WINDOW_WIDTH - self.rect.width
-        elif self.rect.left + self.rect.width > WINDOW_WIDTH:
+            self.rect.left = WIDTH - self.rect.width
+        elif self.rect.left + self.rect.width > WIDTH:
             self.rect.left = 0
         elif self.rect.top < 50:
-            self.rect.top = WINDOW_HEIGHT - self.rect.height
-        elif self.rect.top + self.rect.height > WINDOW_HEIGHT:
+            self.rect.top = HEIGHT - self.rect.height
+        elif self.rect.top + self.rect.height > HEIGHT:
             self.rect.top = 50
 
     #Draws a set of eyes on the head, the location of the eyes is dependent on the speed of the head.
@@ -116,13 +103,13 @@ class Snake():
     def __init__(self, color, secondary_color):
         self.color = color
         self.secondary_color = secondary_color
-        self.eat_sound = Sound(File.locate("res/sounds/bite.WAV"))
-        self.death_sound = Sound(File.locate("res/sounds/death.WAV"))
+        self.eat_sound = Sound(file.locate("res/sounds/bite.WAV"))
+        self.death_sound = Sound(file.locate("res/sounds/death.WAV"))
 
     #Creates the head and the snake's body parts. This method is called when the game starts, and every time the player
     #chooses to play again.
     def construct(self, length):
-        self.head = Head(self.color, WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
+        self.head = Head(self.color, WIDTH/2, HEIGHT/2)
         self.parts = []
         self.parts.append(self.head)
         for i in range(1, length):
@@ -327,14 +314,15 @@ class SettingsMenu():
 
 class Game():
     ADDFOOD = pygame.USEREVENT + 1  #Custom Event used to spawn food a short while after the game starts.
+    SAVE_LOCATION = os.path.join(os.path.expanduser("~"), "AppData\Local\Snakery")
     def __init__(self):
         pygame.display.set_caption("Snake Game")
-        self.window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.window = pygame.display.set_mode((WIDTH, HEIGHT))
         self.snake = Snake(CYAN, BLACK)
         self.clock = pygame.time.Clock()
         self.running = True
         self.sound = True
-        self.settings_btn = Button(File.locate("res/images/SettingsIcon.PNG"), WINDOW_WIDTH - 50, 8, self.pause)
+        self.settings_btn = Button(file.locate("res/images/SettingsIcon.PNG"), WIDTH - 50, 8, self.pause)
         self.highscore = self.read_highscore()
 
     #Pauses the game and displays the settings menu.
@@ -344,9 +332,12 @@ class Game():
         pygame.event.clear(eventtype = pygame.MOUSEBUTTONUP)
     
     #Reads the highscore from a local file.
+    #If the file doesn't exist, it is created
     #If the file is empty or the data in the file is not convertable to int (not a number) then 0 is returned.
     def read_highscore(self):
-        with open(File.locate("res/highscore.txt")) as reader:
+        file.verify_dir(Game.SAVE_LOCATION)
+        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "a+") as reader:
+            reader.seek(0)
             data = reader.readline()
             try:
                 return int(data)
@@ -355,14 +346,15 @@ class Game():
     
     #Overwrites the old highscore with the current highscore.
     def write_highscore(self):
-        with open(File.locate("res/highscore.txt"), "r+") as file:
-            file.truncate(0)
+        file.verify_dir(Game.SAVE_LOCATION)
+        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "w") as file:
             file.write(str(self.highscore))
 
     #Deletes the saved highscore.
     def reset_highscore(self):
-        with open(File.locate("res/highscore.txt"), "r+") as file:
-            file.truncate(0)
+        file.verify_dir(Game.SAVE_LOCATION)
+        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "w") as file:
+            pass
         self.highscore = 0
 
     #Checks if the current score is greater than the high score, if so, the highscore's value is the same as the score.
@@ -375,7 +367,7 @@ class Game():
         score = JOKERMAN.render("Length: " + str(len(self.snake.parts)), CYAN)
         highscore = JOKERMAN.render("Best Length: " + str(self.highscore), CYAN)
         self.window.blit(score[0], (10, 15))
-        self.window.blit(highscore[0], (WINDOW_WIDTH/2 - highscore[1].width/2, 15))
+        self.window.blit(highscore[0], (WIDTH/2 - highscore[1].width/2, 15))
 
     #Called at the beginning of the game and then each time the player loses and decides to play again.
     def init(self):
@@ -409,10 +401,10 @@ class Game():
 
     #Borders visibly define the playable area on the game window.
     def draw_borders(self):
-        pygame.draw.line(self.window, WHITE, (0, 50), (WINDOW_WIDTH-1, 50), 1)
-        pygame.draw.line(self.window, WHITE, (0, WINDOW_HEIGHT-1), (WINDOW_WIDTH-1, WINDOW_HEIGHT-1), 1)
-        pygame.draw.line(self.window, WHITE, (0, 0), (0, WINDOW_HEIGHT-1), 1)
-        pygame.draw.line(self.window, WHITE, (WINDOW_WIDTH-1, 0), (WINDOW_WIDTH-1, WINDOW_HEIGHT-1), 1)
+        pygame.draw.line(self.window, WHITE, (0, 50), (WIDTH-1, 50), 1)
+        pygame.draw.line(self.window, WHITE, (0, HEIGHT-1), (WIDTH-1, HEIGHT-1), 1)
+        pygame.draw.line(self.window, WHITE, (0, 0), (0, HEIGHT-1), 1)
+        pygame.draw.line(self.window, WHITE, (WIDTH-1, 0), (WIDTH-1, HEIGHT-1), 1)
 
     #Renders everything to the screen.
     def render(self):
@@ -430,7 +422,7 @@ class Game():
         self.window.fill(BLACK)
         self.display_scores()
         you_lose = EIGHT_BIT.render("Game Over, press ENTER to replay or ESC to quit.", (255,255,255))
-        self.window.blit(you_lose[0], (15, WINDOW_HEIGHT/2))
+        self.window.blit(you_lose[0], (15, HEIGHT/2))
         pygame.display.flip()
 
     #Called when the snake dies, allowing the player to play again or quit.
@@ -474,4 +466,3 @@ if __name__ == '__main__':
     game.init()
     game.loop()
     game.write_highscore()
-    print(os.path.expanduser("~"))
