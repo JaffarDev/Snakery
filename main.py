@@ -10,6 +10,7 @@ import tkinter
 import functools
 import pygame
 import pygame.freetype
+import os
 import file
 
 #Game window dimensions.
@@ -347,13 +348,13 @@ class Game():
     #Overwrites the old highscore with the current highscore.
     def write_highscore(self):
         file.verify_dir(Game.SAVE_LOCATION)
-        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "w") as file:
-            file.write(str(self.highscore))
+        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "w") as writer:
+            writer.write(str(self.highscore))
 
     #Deletes the saved highscore.
     def reset_highscore(self):
         file.verify_dir(Game.SAVE_LOCATION)
-        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "w") as file:
+        with open(f"{Game.SAVE_LOCATION}\highscore.txt", "w"):
             pass
         self.highscore = 0
 
