@@ -8,9 +8,11 @@
 import random
 import tkinter
 import functools
+import os
+
 import pygame
 import pygame.freetype
-import os
+
 import file
 
 #Game window dimensions.
@@ -18,8 +20,8 @@ WIDTH = 500
 HEIGHT = 400
     
 pygame.init()                                                                #Initialize the pygame module.
-JOKERMAN = pygame.freetype.Font(file.locate("res/fonts/JOKERMAN.ttf"), 17)   #Font used to display scores.
-EIGHT_BIT = pygame.freetype.Font(file.locate("res/fonts/8-BIT.ttf"), 17)     #Font used to display game over text.
+JOKERMAN = pygame.freetype.Font(file.locate_res("res/fonts/JOKERMAN.ttf"), 17)   #Font used to display scores.
+EIGHT_BIT = pygame.freetype.Font(file.locate_res("res/fonts/8-BIT.ttf"), 17)     #Font used to display game over text.
 
 CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
@@ -31,7 +33,7 @@ class Food(pygame.sprite.Sprite):
         super().__init__()
         left = random.randint(0, WIDTH/10 - 1) * 10
         top = random.randint(5, HEIGHT/10 - 1) * 10 
-        self.surface = pygame.image.load(file.locate("res/images/apple.jpg"))
+        self.surface = pygame.image.load(file.locate_res("res/images/apple.jpg"))
         self.rect = self.surface.get_rect(topleft = (left, top))
 
 #Represents each part of the snake.
@@ -104,8 +106,8 @@ class Snake():
     def __init__(self, color, secondary_color):
         self.color = color
         self.secondary_color = secondary_color
-        self.eat_sound = Sound(file.locate("res/sounds/bite.WAV"))
-        self.death_sound = Sound(file.locate("res/sounds/death.WAV"))
+        self.eat_sound = Sound(file.locate_res("res/sounds/bite.WAV"))
+        self.death_sound = Sound(file.locate_res("res/sounds/death.WAV"))
 
     #Creates the head and the snake's body parts. This method is called when the game starts, and every time the player
     #chooses to play again.
@@ -323,7 +325,7 @@ class Game():
         self.clock = pygame.time.Clock()
         self.running = True
         self.sound = True
-        self.settings_btn = Button(file.locate("res/images/SettingsIcon.PNG"), WIDTH - 50, 8, self.pause)
+        self.settings_btn = Button(file.locate_res("res/images/SettingsIcon.PNG"), WIDTH - 50, 8, self.pause)
         self.highscore = self.read_highscore()
 
     #Pauses the game and displays the settings menu.
