@@ -10,14 +10,29 @@ import tkinter
 import functools
 import pygame
 import pygame.freetype
+import os
+import sys
 
-#Game window dimensions
+#Game window dimensions.
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 400
 
-pygame.init()                                                   #Initialize the pygame module.
-JOKERMAN = pygame.freetype.Font("res/fonts/JOKERMAN.ttf", 17)   #Font used to display scores.
-EIGHT_BIT = pygame.freetype.Font("res/fonts/8-BIT.ttf", 17)     #Font used to display game over text.
+#Helper class to deal with files
+class File():
+    #Locates the given resource's path
+    #Resources are in a temp folder if the program was launched from a pyinstaller executable
+    #If the program was run from a development environment, the resources folder is in the project's root directory
+    def locate(relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
+
+pygame.init()                                                              #Initialize the pygame module.
+JOKERMAN = pygame.freetype.Font(File.locate("res/fonts/JOKERMAN.ttf"), 17)   #Font used to display scores.
+EIGHT_BIT = pygame.freetype.Font(File.locate("res/fonts/8-BIT.ttf"), 17)     #Font used to display game over text.
+
 CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -28,7 +43,7 @@ class Food(pygame.sprite.Sprite):
         super().__init__()
         left = random.randint(0, WINDOW_WIDTH/10 - 1) * 10
         top = random.randint(5, WINDOW_HEIGHT/10 - 1) * 10 
-        self.surface = pygame.image.load("res/images/apple.jpg")
+        self.surface = pygame.image.load(File.locate("res/images/apple.jpg"))
         self.rect = self.surface.get_rect(topleft = (left, top))
 
 #Represents each part of the snake.
@@ -101,8 +116,8 @@ class Snake():
     def __init__(self, color, secondary_color):
         self.color = color
         self.secondary_color = secondary_color
-        self.eat_sound = Sound("res/sounds/bite.WAV")
-        self.death_sound = Sound("res/sounds/death.WAV")
+        self.eat_sound = Sound(File.locate("res/sounds/bite.WAV"))
+        self.death_sound = Sound(File.locate("res/sounds/death.WAV"))
 
     #Creates the head and the snake's body parts. This method is called when the game starts, and every time the player
     #chooses to play again.
@@ -319,7 +334,7 @@ class Game():
         self.clock = pygame.time.Clock()
         self.running = True
         self.sound = True
-        self.settings_btn = Button("res/images/SettingsIcon.PNG", WINDOW_WIDTH - 50, 8, self.pause)
+        self.settings_btn = Button(File.locate("res/images/SettingsIcon.PNG"), WINDOW_WIDTH - 50, 8, self.pause)
         self.highscore = self.read_highscore()
 
     #Pauses the game and displays the settings menu.
@@ -331,7 +346,7 @@ class Game():
     #Reads the highscore from a local file.
     #If the file is empty or the data in the file is not convertable to int (not a number) then 0 is returned.
     def read_highscore(self):
-        with open("storage/highscore.txt") as reader:
+        with open(File.locate("res/highscore.txt")) as reader:
             data = reader.readline()
             try:
                 return int(data)
@@ -340,13 +355,13 @@ class Game():
     
     #Overwrites the old highscore with the current highscore.
     def write_highscore(self):
-        with open("storage/highscore.txt", "r+") as file:
+        with open(File.locate("res/highscore.txt"), "r+") as file:
             file.truncate(0)
             file.write(str(self.highscore))
 
     #Deletes the saved highscore.
     def reset_highscore(self):
-        with open("storage/highscore.txt", "r+") as file:
+        with open(File.locate("res/highscore.txt"), "r+") as file:
             file.truncate(0)
         self.highscore = 0
 
@@ -459,3 +474,4 @@ if __name__ == '__main__':
     game.init()
     game.loop()
     game.write_highscore()
+    print(os.path.expanduser("~"))

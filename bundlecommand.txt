@@ -1,0 +1,8 @@
+#The command below creates a one folder bundle of the program
+pyinstaller --noconsole --add-data res;. main.py
+
+#The command below creates a one file bundle of the program (standalone)
+pyinstaller --noconsole --onefile --add-data res;res main.py
+
+#The command below creates a one-file bundle of the program with a console
+pyinstaller --onefile --add-data res;res main.py
