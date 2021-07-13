@@ -345,7 +345,7 @@ class Game():
     #If the file is empty or the data in the file is not convertable to int (not a number) then 0 is returned.
     def read_highscore(self):
         file.verify_dir(Game.SAVE_LOCATION)
-        with open(f"{Game.SAVE_LOCATION}/highscore.txt", "a+") as reader:
+        with open(os.path.join(Game.SAVE_LOCATION, "highscore.txt"), "a+") as reader:
             reader.seek(0)
             data = reader.readline()
             try:
@@ -356,13 +356,13 @@ class Game():
     #Overwrites the old highscore with the current highscore.
     def write_highscore(self):
         file.verify_dir(Game.SAVE_LOCATION)
-        with open(f"{Game.SAVE_LOCATION}/highscore.txt", "w") as writer:
+        with open(os.path.join(Game.SAVE_LOCATION, "highscore.txt"), "w") as writer:
             writer.write(str(self.highscore))
 
     #Deletes the saved highscore.
     def reset_highscore(self):
         file.verify_dir(Game.SAVE_LOCATION)
-        with open(f"{Game.SAVE_LOCATION}/highscore.txt", "w"):
+        with open(os.path.join(Game.SAVE_LOCATION, "highscore.txt"), "w"):
             pass
         self.highscore = 0
 
