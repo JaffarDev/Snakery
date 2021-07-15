@@ -22,5 +22,5 @@ Settings menu is displayed by clicking on the gear icon on the top right corner 
 ![Settings](demo/Settings.gif)  
 
 # Installation
-An exe build is available for windows users, all you have to do is download the exe file from the project's dist folder and play!
+An exe build is available for windows users, all you have to do is download Snakery.zip inside the project's dist folder, extract the exe file inside, and play!
 Non-windows users can run the source code if they have python installed.
